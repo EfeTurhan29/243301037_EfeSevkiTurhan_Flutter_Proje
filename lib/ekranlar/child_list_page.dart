@@ -108,6 +108,7 @@ class _ChildListPageState extends State<ChildListPage> {
                   MaterialPageRoute(
                     builder: (_) => ChildDetailPage(
                       role: widget.role,
+                      childId: child['id'],
                       childName: childName,
                     ),
                   ),

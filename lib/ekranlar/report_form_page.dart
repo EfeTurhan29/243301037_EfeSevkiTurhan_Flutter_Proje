@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
 class ReportFormPage extends StatefulWidget {
+  final String childId;
   final String childName;
 
-  const ReportFormPage({super.key, required this.childName});
+  const ReportFormPage({
+    super.key,
+    required this.childId,
+    required this.childName,
+  });
 
   @override
   State<ReportFormPage> createState() => _ReportFormPageState();
