@@ -162,8 +162,8 @@ class _HomePageState extends State<HomePage> {
               crossAxisSpacing: 12,
               children: [
                 HomeMenuCard(
-                  title: 'Çocuklar',
-                  icon: Icons.child_friendly,
+                  title: 'Öğrenciler',
+                  icon: Icons.contacts_rounded,
                   onTap: () {
                     Navigator.push(
                       context,
