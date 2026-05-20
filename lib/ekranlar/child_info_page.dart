@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../app_colors.dart';
+import '../user_role.dart';
+import 'child_form_page.dart';
 
 class ChildInfoPage extends StatefulWidget {
+  final UserRole role;
   final String childId;
   final String childName;
 
   const ChildInfoPage({
+    required this.role,
     super.key,
     required this.childId,
     required this.childName,
@@ -29,6 +33,60 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
     super.initState();
     fetchChildInfo();
   }
+  
+    Future<void> deleteChild() async {
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Öğrenciyi Sil'),
+        content: Text(
+          '${widget.childName} adlı öğrenciyi silmek istediğine emin misin? Bu öğrencinin rapor ve ödeme kayıtları da silinebilir.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, false);
+            },
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context, true);
+            },
+            child: const Text('Sil'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirm != true) {
+    return;
+  }
+
+  try {
+    await supabase.from('children').delete().eq('id', widget.childId);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Öğrenci silindi.'),
+      ),
+    );
+
+    Navigator.pop(context, true);
+  } catch (error) {
+    if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Öğrenci silinirken hata oluştu: $error'),
+        ),
+      );
+    }
+  } 
 
   Future<void> fetchChildInfo() async {
     try {
@@ -51,6 +109,7 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
       });
     }
   }
+  
 
   String getValue(String key, String emptyText) {
     final value = child?[key];
@@ -178,6 +237,33 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
             title: 'Genel Not',
             value: note,
           ),
+          if (widget.role == UserRole.teacher) ...[
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChildFormPage(
+                      existingChild: child,
+                    ),
+                  ),
+                );
+
+                if (result == true) {
+                  fetchChildInfo();
+                }
+              },
+              icon: const Icon(Icons.edit),
+              label: const Text('Öğrenci Bilgilerini Düzenle'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: deleteChild,
+              icon: const Icon(Icons.delete),
+              label: const Text('Öğrenciyi Sil'),
+            ),
+          ],
         ],
       ),
     );

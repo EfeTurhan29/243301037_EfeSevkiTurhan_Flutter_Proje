@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../app_colors.dart';
 import '../user_role.dart';
+import 'child_form_page.dart';
 import 'child_info_page.dart';
 
 class ChildListPage extends StatefulWidget {
@@ -31,13 +32,16 @@ class _ChildListPageState extends State<ChildListPage> {
     try {
       final response = await supabase
           .from('children')
-          .select('id, full_name, age, classroom')
+          .select(
+            'id, full_name, age, classroom, height_cm, weight_kg, parent_name, parent_phone, allergy_info, note',
+          )
           .order('full_name', ascending: true);
 
       List<Map<String, dynamic>> loadedChildren =
           List<Map<String, dynamic>>.from(response);
 
-      // Veli rolündeyse örnek olarak sadece Nazlıcan Altın görünsün.
+      // Veli rolündeyse sadece kendi çocuğu görünsün.
+      // Şimdilik örnek veli çocuğu Nazlıcan Altın.
       if (widget.role == UserRole.parent) {
         loadedChildren = loadedChildren
             .where((child) => child['full_name'] == 'Nazlıcan Altın')
@@ -84,11 +88,30 @@ class _ChildListPageState extends State<ChildListPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Öğrenci Listesi')),
+      floatingActionButton: widget.role == UserRole.teacher
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ChildFormPage(),
+                  ),
+                );
+
+                if (result == true) {
+                  fetchChildren();
+                }
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Öğrenci Ekle'),
+            )
+          : null,
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: children.length,
         itemBuilder: (context, index) {
           final child = children[index];
+
           final childName = child['full_name'] ?? 'İsimsiz Öğrenci';
           final classroom = child['classroom'] ?? 'Sınıf bilgisi yok';
           final age = child['age']?.toString() ?? '-';
@@ -102,16 +125,21 @@ class _ChildListPageState extends State<ChildListPage> {
               title: Text(childName),
               subtitle: Text('$classroom | Yaş: $age'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => ChildInfoPage(
+                      role: widget.role,
                       childId: child['id'],
-                        childName: childName,
+                      childName: childName,
                     ),
                   ),
                 );
+
+                if (result == true) {
+                  fetchChildren();
+                }
               },
             ),
           );

@@ -6,10 +6,10 @@ import '../user_role.dart';
 import '../widgets/home_menu_card.dart';
 import '../widgets/summary_card.dart';
 
-import 'child_detail_page.dart';
 import 'child_list_page.dart';
 import 'payments_page.dart';
 import 'profile_page.dart';
+import 'report_list_page.dart';
 
 class HomePage extends StatefulWidget {
   final UserRole role;
@@ -180,11 +180,7 @@ class _HomePageState extends State<HomePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ChildDetailPage(
-                          role: widget.role,
-                          childId: '00000000-0000-0000-0000-000000000001',
-                          childName: 'Nazlıcan Altın',
-                        ),
+                        builder: (_) => ReportListPage(role: widget.role),
                       ),
                     );
                   },
