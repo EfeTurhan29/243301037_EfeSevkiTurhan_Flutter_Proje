@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../app_colors.dart';
 import '../user_role.dart';
-import '../main.dart';
 
 class ProfilePage extends StatelessWidget {
   final UserRole role;
@@ -52,13 +51,12 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(height: 20),
           FilledButton.icon(
             onPressed: () {
-              Navigator.pushAndRemoveUntil(
+              Navigator.pushNamedAndRemoveUntil(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const LoginPage(supabaseReady: false),
-                ),
+                '/login',
                 (route) => false,
               );
+              
             },
             icon: const Icon(Icons.logout),
             label: const Text('Çıkış Yap'),
