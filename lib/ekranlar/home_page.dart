@@ -112,7 +112,7 @@ class HomePage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const PaymentsPage(),
+                      builder: (_) => PaymentsPage(role: role),
                     ),
                   );
                 },
