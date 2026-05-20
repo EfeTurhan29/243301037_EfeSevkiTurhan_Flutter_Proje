@@ -10,6 +10,7 @@ import 'ekranlar/child_detail_page.dart';
 import 'ekranlar/child_list_page.dart';
 import 'widgets/home_menu_card.dart';
 import 'widgets/summary_card.dart';
+import 'ekranlar/home_page.dart';
 
 const String supabaseUrl = 'SUPABASE_URL';
 const String supabaseAnonKey = 'SUPABASE_ANON_KEY';
@@ -46,6 +47,9 @@ class KresApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: LoginPage(supabaseReady: supabaseReady),
+      routes: {
+        '/login': (context) => LoginPage(supabaseReady: supabaseReady),
+      },
     );
   }
 }
@@ -117,7 +121,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Kare Kod Eğitim Kurumlari',
+                      'özel Karekod Kreş',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 24,
@@ -212,156 +216,6 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-
-//öğretmen veli panelleri
-class HomePage extends StatelessWidget {
-  final UserRole role;
-
-  const HomePage({super.key, required this.role});
-
-  @override
-  Widget build(BuildContext context) {
-    final isTeacher = role == UserRole.teacher;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(isTeacher ? 'Öğretmen Paneli' : 'Veli Paneli'),
-        actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const LoginPage(supabaseReady: false),
-                ),
-              );
-            },
-            icon: const Icon(Icons.logout),
-          )
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: appCardBlue,//açıklama kutusu
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 32,
-                  backgroundColor: appLightBlue,
-                  //açıklama kutusu içi yuvarlak
-                  child: Icon(
-                    isTeacher ? Icons.school : Icons.family_restroom,
-                    size: 36,
-                    color: appBlue,
-                  //açıklama kutusu icon
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    isTeacher
-                        ? 'Bugün çocukların günlük raporlarını ekleyebilir ve ödeme durumlarını takip edebilirsin.'
-                        : 'Çocuğunun günlük raporlarını ve ödeme bilgilerini buradan takip edebilirsin.',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            children: [
-              HomeMenuCard(
-                title: 'Öğrenciler',
-                icon: Icons.contacts_rounded,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ChildListPage(role: role),
-                    ),
-                  );
-                },
-              ),
-              HomeMenuCard(
-                title: 'Raporlar',
-                icon: Icons.assignment,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ChildDetailPage(
-                        role: role,
-                        childName: 'Nazlıcan Altın',
-                      ),
-                    ),
-                  );
-                },
-              ),
-              HomeMenuCard(
-                title: 'Ödemeler',
-                icon: Icons.payments,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const PaymentsPage(),
-                    ),
-                  );
-                },
-              ),
-              HomeMenuCard(
-                title: 'Profil',
-                icon: Icons.person,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProfilePage(role: role),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Bugünkü Özet',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          const SummaryCard(
-            title: 'Toplam Öğrenci',
-            value: '15',
-            icon: Icons.groups,
-          ),
-          const SummaryCard(
-            title: 'Bugün Girilen Rapor',
-            value: '5',
-            icon: Icons.note_alt,
-          ),
-          const SummaryCard(
-            title: 'Bekleyen Ödeme',
-            value: '2',
-            icon: Icons.warning_amber,
-          ),
-        ],
       ),
     );
   }

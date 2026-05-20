@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Uygulama renk paleti
 const Color appBlue = Color.fromARGB(255, 93, 173, 226);
 const Color appLightBlue = Color.fromARGB(255, 174, 214, 241);
 const Color appBackground = Color.fromARGB(255, 235, 245, 251);
