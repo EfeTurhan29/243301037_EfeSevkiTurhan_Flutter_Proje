@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../app_colors.dart';
 import '../user_role.dart';
-import 'child_detail_page.dart';
+import 'child_info_page.dart';
 
 class ChildListPage extends StatefulWidget {
   final UserRole role;
@@ -106,10 +106,9 @@ class _ChildListPageState extends State<ChildListPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ChildDetailPage(
-                      role: widget.role,
+                    builder: (_) => ChildInfoPage(
                       childId: child['id'],
-                      childName: childName,
+                        childName: childName,
                     ),
                   ),
                 );

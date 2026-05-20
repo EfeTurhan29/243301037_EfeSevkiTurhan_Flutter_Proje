@@ -30,11 +30,13 @@ class _PaymentsPageState extends State<PaymentsPage> {
     try {
       final response = await supabase
           .from('payments')
-          .select('id, month, amount, status, payment_date, due_date, children(full_name)')
+          .select(
+            'id, month, amount, status, payment_date, due_date, children(full_name)',
+          )
           .order('due_date', ascending: true);
 
       List<Map<String, dynamic>> loadedPayments =
-        List<Map<String, dynamic>>.from(response);
+          List<Map<String, dynamic>>.from(response);
 
       // Veli rolündeyse sadece kendi çocuğunun ödemeleri görünsün.
       // Şimdilik örnek veli çocuğu Nazlıcan Altın olarak ayarlandı.
@@ -106,6 +108,84 @@ class _PaymentsPageState extends State<PaymentsPage> {
     return dueDateOnly.isBefore(todayOnly);
   }
 
+  Map<String, List<Map<String, dynamic>>> groupPaymentsByChild() {
+    final Map<String, List<Map<String, dynamic>>> groupedPayments = {};
+
+    for (final payment in payments) {
+      final childData = payment['children'];
+
+      final childName = childData != null
+          ? childData['full_name'] ?? 'Öğrenci bilgisi yok'
+          : 'Öğrenci bilgisi yok';
+
+      if (!groupedPayments.containsKey(childName)) {
+        groupedPayments[childName] = [];
+      }
+
+      groupedPayments[childName]!.add(payment);
+    }
+
+    return groupedPayments;
+  }
+
+  Color getStatusColor(String status, dynamic dueDate) {
+    final isPaid = status == 'Ödendi';
+    final isOverdue = isPaymentOverdue(status, dueDate);
+
+    if (isPaid) {
+      return appGreen;
+    }
+
+    if (isOverdue) {
+      return appRed;
+    }
+
+    return appOrange;
+  }
+
+  IconData getStatusIcon(String status, dynamic dueDate) {
+    final isPaid = status == 'Ödendi';
+    final isOverdue = isPaymentOverdue(status, dueDate);
+
+    if (isPaid) {
+      return Icons.check_circle;
+    }
+
+    if (isOverdue) {
+      return Icons.error;
+    }
+
+    return Icons.pending;
+  }
+
+  String getStatusText(String status, dynamic dueDate) {
+    final isOverdue = isPaymentOverdue(status, dueDate);
+
+    if (isOverdue) {
+      return 'Gecikmiş';
+    }
+
+    return status;
+  }
+
+  int getOverdueCount(List<Map<String, dynamic>> childPayments) {
+    return childPayments.where((payment) {
+      final status = payment['status'] ?? 'Bilinmiyor';
+      final dueDate = payment['due_date'];
+
+      return isPaymentOverdue(status, dueDate);
+    }).length;
+  }
+
+  int getPendingCount(List<Map<String, dynamic>> childPayments) {
+    return childPayments.where((payment) {
+      final status = payment['status'] ?? 'Bilinmiyor';
+      final dueDate = payment['due_date'];
+
+      return status != 'Ödendi' && !isPaymentOverdue(status, dueDate);
+    }).length;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -141,56 +221,79 @@ class _PaymentsPageState extends State<PaymentsPage> {
       );
     }
 
+    final groupedPayments = groupPaymentsByChild();
+    final childNames = groupedPayments.keys.toList();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Ödeme Takibi')),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: payments.length,
+        itemCount: childNames.length,
         itemBuilder: (context, index) {
-          final payment = payments[index];
+          final childName = childNames[index];
+          final childPayments = groupedPayments[childName] ?? [];
 
-          final month = payment['month'] ?? 'Ay bilgisi yok';
-          final amount = formatAmount(payment['amount']);
-          final status = payment['status'] ?? 'Bilinmiyor';
-          final dueDate = payment['due_date'];
-
-          final childData = payment['children'];
-          final childName = childData != null
-              ? childData['full_name'] ?? 'Öğrenci bilgisi yok'
-              : 'Öğrenci bilgisi yok';
-
-          final isPaid = status == 'Ödendi';
-          final isOverdue = isPaymentOverdue(status, dueDate);
-
-          final statusColor = isPaid
-              ? appGreen
-              : isOverdue
-                  ? appRed
-                  : appOrange;
-
-          final statusText = isOverdue ? 'Gecikmiş Ödeme' : status;
+          final overdueCount = getOverdueCount(childPayments);
+          final pendingCount = getPendingCount(childPayments);
 
           return Card(
-            child: ListTile(
-              leading: Icon(
-                isPaid
-                    ? Icons.check_circle
-                    : isOverdue
-                        ? Icons.error
-                        : Icons.pending,
-                color: statusColor,
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: ExpansionTile(
+              initiallyExpanded: index == 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              title: Text(childName),
-              subtitle: Text(
-                '$month | Tutar: $amount\nSon ödeme: ${formatDate(dueDate)}',
+              collapsedShape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              trailing: Text(
-                statusText,
+              leading: CircleAvatar(
+                backgroundColor: appLightBlue,
+                child: Icon(Icons.person, color: appBlue),
+              ),
+              title: Text(
+                childName,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: statusColor,
+                  color: appDarkText,
                 ),
               ),
+              subtitle: Text(
+                '${childPayments.length} ödeme kaydı'
+                '${pendingCount > 0 ? ' | $pendingCount bekleyen' : ''}'
+                '${overdueCount > 0 ? ' | $overdueCount gecikmiş' : ''}',
+              ),
+              children: childPayments.map((payment) {
+                final month = payment['month'] ?? 'Ay bilgisi yok';
+                final amount = formatAmount(payment['amount']);
+                final status = payment['status'] ?? 'Bilinmiyor';
+                final dueDate = payment['due_date'];
+
+                final statusColor = getStatusColor(status, dueDate);
+                final statusIcon = getStatusIcon(status, dueDate);
+                final statusText = getStatusText(status, dueDate);
+
+                return ListTile(
+                  leading: Icon(
+                    statusIcon,
+                    color: statusColor,
+                  ),
+                  title: Text(month),
+                  subtitle: Text(
+                    'Tutar: $amount\nSon ödeme: ${formatDate(dueDate)}',
+                  ),
+                  trailing: Text(
+                    statusText,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: statusColor,
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
           );
         },
