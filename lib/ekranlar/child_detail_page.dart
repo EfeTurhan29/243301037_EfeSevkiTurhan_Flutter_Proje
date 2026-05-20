@@ -39,10 +39,10 @@ class _ChildDetailPageState extends State<ChildDetailPage> {
       final response = await supabase
           .from('daily_reports')
           .select(
-            'id, report_date, food_status, sleep_status, mood_status, activity_note, relation_note',
+            'id, report_date, created_at, food_status, sleep_status, mood_status, activity_note, relation_note',
           )
           .eq('child_id', widget.childId)
-          .order('report_date', ascending: false)
+          .order('created_at', ascending: false)
           .limit(1);
 
       final reports = List<Map<String, dynamic>>.from(response);

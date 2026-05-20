@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ReportFormPage extends StatefulWidget {
   final String childId;
@@ -15,11 +16,15 @@ class ReportFormPage extends StatefulWidget {
 }
 
 class _ReportFormPageState extends State<ReportFormPage> {
+  final supabase = Supabase.instance.client;
+
   final foodController = TextEditingController();
   final sleepController = TextEditingController();
   final moodController = TextEditingController();
   final activityController = TextEditingController();
   final relationController = TextEditingController();
+
+  bool isSaving = false;
 
   @override
   void initState() {
@@ -31,16 +36,47 @@ class _ReportFormPageState extends State<ReportFormPage> {
     relationController.text = 'Arkadaşlarıyla uyumlu iletişim kurdu.';
   }
 
-  void saveReport() {
+  Future<void> saveReport() async {
+  setState(() {
+    isSaving = true;
+  });
+
+  try {
+    await supabase.from('daily_reports').insert({
+      'child_id': widget.childId,
+      'report_date': DateTime.now().toIso8601String().substring(0, 10),
+      'food_status': foodController.text.trim(),
+      'sleep_status': sleepController.text.trim(),
+      'mood_status': moodController.text.trim(),
+      'activity_note': activityController.text.trim(),
+      'relation_note': relationController.text.trim(),
+    });
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text(
-          'Günlük rapor kaydedildi. Sonraki adımda Supabase’e gönderilecek.',
-        ),
+        content: Text('Günlük rapor Supabase veritabanına kaydedildi.'),
       ),
     );
+
     Navigator.pop(context);
+  } catch (error) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Rapor kaydedilirken hata oluştu: $error'),
+      ),
+    );
+  } finally {
+    if (mounted) {
+      setState(() {
+        isSaving = false;
+      });
+    }
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -94,9 +130,15 @@ class _ReportFormPageState extends State<ReportFormPage> {
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
-            onPressed: saveReport,
-            icon: const Icon(Icons.save),
-            label: const Text('Raporu Kaydet'),
+            onPressed: isSaving ? null : saveReport,
+            icon: isSaving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save),
+            label: Text(isSaving ? 'Kaydediliyor...' : 'Raporu Kaydet'),
           ),
         ],
       ),
