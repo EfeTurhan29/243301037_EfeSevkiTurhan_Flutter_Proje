@@ -12,6 +12,14 @@
         "--web-port",
         "5000"
       ]
+    },
+    {
+      "name": "Flutter Android Telefon",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart"
+
     }
+
   ]
 }
