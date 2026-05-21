@@ -31,26 +31,34 @@ class _PaymentsPageState extends State<PaymentsPage> {
       final response = await supabase
           .from('payments')
           .select(
-            'id, month, amount, status, payment_date, due_date, children(full_name)',
+            'id, child_id, month, amount, status, payment_date, due_date, children(full_name)',
           )
           .order('due_date', ascending: true);
 
       List<Map<String, dynamic>> loadedPayments =
           List<Map<String, dynamic>>.from(response);
 
-      // Veli rolündeyse sadece kendi çocuğunun ödemeleri görünsün.
-      // Şimdilik örnek veli çocuğu Nazlıcan Altın olarak ayarlandı.
+      
       if (widget.role == UserRole.parent) {
-        loadedPayments = loadedPayments.where((payment) {
-          final childData = payment['children'];
+        final userId = supabase.auth.currentUser?.id;
 
-          if (childData == null) {
-            return false;
+        if (userId == null) {
+          loadedPayments = [];
+        } else {
+          final relationResponse = await supabase
+              .from('child_parents')
+              .select('child_id')
+              .eq('parent_id', userId);
+
+          final childIds = List<Map<String, dynamic>>.from(relationResponse)
+              .map((relation) => relation['child_id'].toString())
+              .toSet();
+
+          loadedPayments = loadedPayments
+              .where((payment) => childIds.contains(payment['child_id'].toString()))
+              .toList();
           }
-
-          return childData['full_name'] == 'Nazlıcan Altın';
-        }).toList();
-      }
+        }
 
       setState(() {
         payments = loadedPayments;
@@ -63,6 +71,46 @@ class _PaymentsPageState extends State<PaymentsPage> {
       });
     }
   }
+
+  Future<void> payPayment(Map<String, dynamic> payment) async {
+  final paymentId = payment['id'];
+
+  if (paymentId == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Ödeme kaydı bulunamadı.'),
+      ),
+    );
+    return;
+  }
+
+  try {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+
+    await supabase.from('payments').update({
+      'status': 'Ödendi',
+      'payment_date': today,
+    }).eq('id', paymentId);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Ödeme başarıyla yapıldı.'),
+      ),
+    );
+
+    fetchPayments();
+  } catch (error) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Ödeme yapılırken hata oluştu: $error'),
+      ),
+    );
+  }
+}
 
   String formatAmount(dynamic amount) {
     if (amount is num) {
@@ -285,13 +333,21 @@ class _PaymentsPageState extends State<PaymentsPage> {
                   subtitle: Text(
                     'Tutar: $amount\nSon ödeme: ${formatDate(dueDate)}',
                   ),
-                  trailing: Text(
-                    statusText,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: statusColor,
-                    ),
-                  ),
+                  trailing: widget.role == UserRole.parent && status != 'Ödendi'
+                      ? TextButton.icon(
+                          onPressed: () {
+                            payPayment(payment);
+                          },
+                          icon: const Icon(Icons.payment),
+                          label: const Text('Öde'),
+                        )
+                      : Text(
+                          statusText,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: statusColor,
+                          ),
+                        ),
                 );
               }).toList(),
             ),

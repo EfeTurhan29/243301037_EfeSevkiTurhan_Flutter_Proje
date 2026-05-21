@@ -41,7 +41,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
       final response = await supabase
           .from('profiles')
-          .select('full_name, email, role, created_at')
+          .select('full_name, email, role, phone, created_at')
           .eq('id', user.id)
           .limit(1);
 
@@ -117,6 +117,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final fullName = profile?['full_name']?.toString() ?? 'Ad bilgisi yok';
     final email = profile?['email']?.toString() ?? 'E-posta bilgisi yok';
     final role = profile?['role']?.toString() ?? widget.role.name;
+    final phone = profile?['phone']?.toString() ?? 'Telefon bilgisi yok';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profil')),
@@ -169,13 +170,16 @@ class _ProfilePageState extends State<ProfilePage> {
               subtitle: Text(getRoleText(role)),
             ),
           ),
-          Card(
-            child: ListTile(
-              leading: Icon(Icons.storage, color: appBlue),
-              title: const Text('Veri Saklama'),
-              subtitle: const Text('Supabase veritabanı ile bağlantı kuruldu.'),
+          
+          if (role == 'parent')
+            Card(
+              child: ListTile(
+                leading: Icon(Icons.phone, color: appBlue),
+                title: const Text('Veli Telefon Numarası'),
+                subtitle: Text(phone),
+              ),
             ),
-          ),
+
           const SizedBox(height: 20),
           FilledButton.icon(
             onPressed: logout,

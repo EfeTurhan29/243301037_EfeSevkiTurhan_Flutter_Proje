@@ -19,10 +19,21 @@ class _RegisterPageState extends State<RegisterPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final teacherCodeController = TextEditingController();
+  final phoneController = TextEditingController();
 
   UserRole selectedRole = UserRole.parent;
   bool isPasswordVisible = false;
   bool isLoading = false;
+  bool isLoadingChildren = true;
+
+  List<Map<String, dynamic>> children = [];
+  String? selectedChildId;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchChildrenForParentRegister();
+  }
 
   @override
   void dispose() {
@@ -30,7 +41,38 @@ class _RegisterPageState extends State<RegisterPage> {
     emailController.dispose();
     passwordController.dispose();
     teacherCodeController.dispose();
+    phoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> fetchChildrenForParentRegister() async {
+    try {
+      final response = await supabase
+          .from('children')
+          .select('id, full_name, classroom')
+          .order('full_name', ascending: true);
+
+      final loadedChildren = List<Map<String, dynamic>>.from(response);
+
+      setState(() {
+        children = loadedChildren;
+        selectedChildId =
+            loadedChildren.isNotEmpty ? loadedChildren.first['id'] : null;
+        isLoadingChildren = false;
+      });
+    } catch (error) {
+      setState(() {
+        isLoadingChildren = false;
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Çocuk listesi alınırken hata oluştu: $error'),
+        ),
+      );
+    }
   }
 
   Future<void> registerUser() async {
@@ -38,6 +80,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
     final teacherCode = teacherCodeController.text.trim();
+    final phone = phoneController.text.trim();
 
     if (fullName.isEmpty || email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -52,6 +95,24 @@ class _RegisterPageState extends State<RegisterPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Şifre en az 6 karakter olmalıdır.'),
+        ),
+      );
+      return;
+    }
+
+    if (selectedRole == UserRole.parent && phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veli telefon numarası boş bırakılamaz.'),
+        ),
+      );
+      return;
+    }
+
+    if (selectedRole == UserRole.parent && selectedChildId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veli hesabı için çocuk seçimi zorunludur.'),
         ),
       );
       return;
@@ -92,7 +153,15 @@ class _RegisterPageState extends State<RegisterPage> {
         'full_name': fullName,
         'email': email,
         'role': selectedRole.name,
+        'phone': selectedRole == UserRole.parent ? phone : null,
       });
+
+      if (selectedRole == UserRole.parent) {
+        await supabase.from('child_parents').insert({
+          'child_id': selectedChildId,
+          'parent_id': user.id,
+        });
+      }
 
       if (!mounted) return;
 
@@ -211,10 +280,51 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 if (selectedRole == UserRole.parent) {
                   teacherCodeController.clear();
+                } else {
+                  phoneController.clear();
+                  selectedChildId = null;
                 }
               });
             },
           ),
+
+          if (selectedRole == UserRole.parent) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Veli Telefon Numarası',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.phone),
+              ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: selectedChildId,
+              decoration: const InputDecoration(
+                labelText: 'Çocuğunuzu Seçin',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.child_care),
+              ),
+              items: children.map((child) {
+                final childName = child['full_name'] ?? 'İsimsiz Öğrenci';
+                final classroom = child['classroom'] ?? 'Sınıf bilgisi yok';
+
+                return DropdownMenuItem<String>(
+                  value: child['id'],
+                  child: Text('$childName - $classroom'),
+                );
+              }).toList(),
+              onChanged: isLoadingChildren
+                  ? null
+                  : (value) {
+                      setState(() {
+                        selectedChildId = value;
+                      });
+                    },
+            ),
+          ],
 
           if (selectedRole == UserRole.teacher) ...[
             const SizedBox(height: 12),

@@ -40,12 +40,25 @@ class _ChildListPageState extends State<ChildListPage> {
       List<Map<String, dynamic>> loadedChildren =
           List<Map<String, dynamic>>.from(response);
 
-      // Veli rolündeyse sadece kendi çocuğu görünsün.
-      // Şimdilik örnek veli çocuğu Nazlıcan Altın.
       if (widget.role == UserRole.parent) {
-        loadedChildren = loadedChildren
-            .where((child) => child['full_name'] == 'Nazlıcan Altın')
-            .toList();
+        final userId = supabase.auth.currentUser?.id;
+
+        if (userId == null) {
+          loadedChildren = [];
+        } else {
+          final relationResponse = await supabase
+              .from('child_parents')
+              .select('child_id')
+              .eq('parent_id', userId);
+
+          final childIds = List<Map<String, dynamic>>.from(relationResponse)
+              .map((relation) => relation['child_id'].toString())
+              .toSet();
+
+          loadedChildren = loadedChildren
+              .where((child) => childIds.contains(child['id'].toString()))
+              .toList();
+        }
       }
 
       setState(() {
