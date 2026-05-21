@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_colors.dart';
 import '../user_role.dart';
@@ -105,7 +106,14 @@ class _HomePageState extends State<HomePage> {
         title: Text(isTeacher ? 'Öğretmen Paneli' : 'Veli Paneli'),
         actions: [
           IconButton(
-            onPressed: () {
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('remember_me', false);
+              
+              await Supabase.instance.client.auth.signOut();
+
+              if (!context.mounted) return;
+
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 '/login',

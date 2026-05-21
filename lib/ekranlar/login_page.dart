@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_colors.dart';
 import '../user_role.dart';
@@ -15,27 +17,124 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final supabase = Supabase.instance.client;
+
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  UserRole selectedRole = UserRole.teacher;
   bool isPasswordVisible = false;
+  bool isLoading = false;
+  bool rememberMe = true;
 
   @override
   void initState() {
     super.initState();
-    emailController.text = 'ogretmen@test.com';
-    passwordController.text = '123456';
+
+    // Test için istersen buraya son oluşturduğun kullanıcıyı yazabilirsin.
+    emailController.text = '';
+    passwordController.text = '';
   }
 
-  void login() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => HomePage(role: selectedRole),
+  Future<void> login() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('E-posta ve şifre boş bırakılamaz.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final authResponse = await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = authResponse.user;
+
+      if (user == null) {
+        throw 'Kullanıcı bulunamadı.';
+      }
+
+      final profile = await supabase
+          .from('profiles')
+          .select('id, full_name, email, role')
+          .eq('id', user.id)
+          .single();
+
+      final roleText = profile['role']?.toString() ?? 'parent';
+
+      final userRole =
+          roleText == 'teacher' ? UserRole.teacher : UserRole.parent;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('remember_me', rememberMe);
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HomePage(role: userRole),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Giriş yapılırken hata oluştu: $error'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> resetPassword() async {
+  final email = emailController.text.trim();
+
+  if (email.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Şifre sıfırlama için e-posta adresini yazmalısın.'),
+      ),
+    );
+    return;
+  }
+
+  try {
+    await supabase.auth.resetPasswordForEmail(email);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Şifre sıfırlama bağlantısı e-posta adresine gönderildi.'),
+      ),
+    );
+  } catch (error) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Şifre sıfırlama işlemi başarısız: $error'),
       ),
     );
   }
+}
 
   void openRegisterPage() {
     Navigator.push(
@@ -48,8 +147,6 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final roleName = selectedRole == UserRole.teacher ? 'Öğretmen' : 'Veli';
-
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -87,41 +184,13 @@ class _LoginPageState extends State<LoginPage> {
                           : 'Tasarım modu: Supabase bilgileri sonra eklenecek',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: widget.supabaseReady
-                            ? appGreen
-                            : appOrange,
+                        color: widget.supabaseReady ? appGreen : appOrange,
                       ),
                     ),
                     const SizedBox(height: 24),
-                    SegmentedButton<UserRole>(
-                      segments: const [
-                        ButtonSegment(
-                          value: UserRole.teacher,
-                          label: Text('Öğretmen'),
-                          icon: Icon(Icons.school),
-                        ),
-                        ButtonSegment(
-                          value: UserRole.parent,
-                          label: Text('Veli'),
-                          icon: Icon(Icons.family_restroom),
-                        ),
-                      ],
-                      selected: {selectedRole},
-                      onSelectionChanged: (value) {
-                        setState(() {
-                          selectedRole = value.first;
-
-                          if (selectedRole == UserRole.teacher) {
-                            emailController.text = 'ogretmen@test.com';
-                          } else {
-                            emailController.text = 'veli@test.com';
-                          }
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 20),
                     TextField(
                       controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
                       decoration: const InputDecoration(
                         labelText: 'E-posta',
                         border: OutlineInputBorder(),
@@ -160,14 +229,46 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
+                    
+                    const SizedBox(height: 8),
+
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: rememberMe,
+                          onChanged: (value) {
+                            setState(() {
+                              rememberMe = value ?? true;
+                            });
+                          },
+                        ),
+                        const Text('Hesabımı açık tut'),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: resetPassword,
+                          child: const Text('Şifremi unuttum'),
+                        ),
+                      ],
+                    ),
+                    
                     const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
                       height: 48,
                       child: FilledButton.icon(
-                        onPressed: login,
-                        icon: const Icon(Icons.login),
-                        label: Text('$roleName olarak giriş yap'),
+                        onPressed: isLoading ? null : login,
+                        icon: isLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.login),
+                        label: Text(
+                          isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap',
+                        ),
                       ),
                     ),
                     TextButton(

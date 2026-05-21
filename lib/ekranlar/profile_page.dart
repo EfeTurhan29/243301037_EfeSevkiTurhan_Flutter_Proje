@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../app_colors.dart';
 import '../user_role.dart';
@@ -50,14 +51,18 @@ class ProfilePage extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
-            onPressed: () {
+            onPressed: () async {
+              await Supabase.instance.client.auth.signOut();
+
+              if (!context.mounted) return;
+
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 '/login',
                 (route) => false,
               );
-              
             },
+            
             icon: const Icon(Icons.logout),
             label: const Text('Çıkış Yap'),
           ),
