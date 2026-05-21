@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../app_colors.dart';
 import '../user_role.dart';
+import '../log_service.dart';
 import 'child_form_page.dart';
 
 class ChildInfoPage extends StatefulWidget {
@@ -67,6 +68,11 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
 
   try {
     await supabase.from('children').delete().eq('id', widget.childId);
+
+    await LogService.addLog(
+      action: 'child_delete',
+      description: '${widget.childName} adlı öğrenci silindi.',
+    );
 
     if (!mounted) return;
 

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_colors.dart';
 import '../user_role.dart';
+import '../log_service.dart';
 import 'home_page.dart';
 import 'register_page.dart';
 
@@ -77,6 +78,11 @@ class _LoginPageState extends State<LoginPage> {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('remember_me', rememberMe);
+
+      await LogService.addLog(
+        action: 'login',
+        description: '$email adresli kullanıcı giriş yaptı.',
+      );
 
       if (!mounted) return;
 

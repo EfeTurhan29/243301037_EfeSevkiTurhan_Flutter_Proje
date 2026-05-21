@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../app_colors.dart';
 import '../user_role.dart';
+import '../log_service.dart';
 
 class PaymentsPage extends StatefulWidget {
   final UserRole role;
@@ -91,6 +92,17 @@ class _PaymentsPageState extends State<PaymentsPage> {
       'status': 'Ödendi',
       'payment_date': today,
     }).eq('id', paymentId);
+
+    final month = payment['month'] ?? 'Ay bilgisi yok';
+    final childData = payment['children'];
+    final childName = childData != null
+        ? childData['full_name'] ?? 'Öğrenci bilgisi yok'
+        : 'Öğrenci bilgisi yok';
+
+    await LogService.addLog(
+      action: 'payment_paid',
+      description: '$childName için $month ödemesi veli tarafından ödendi.',
+    );
 
     if (!mounted) return;
 

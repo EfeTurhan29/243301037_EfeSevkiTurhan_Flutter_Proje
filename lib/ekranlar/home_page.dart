@@ -6,6 +6,7 @@ import '../app_colors.dart';
 import '../user_role.dart';
 import '../widgets/home_menu_card.dart';
 import '../widgets/summary_card.dart';
+import '../log_service.dart';
 
 import 'child_list_page.dart';
 import 'payments_page.dart';
@@ -109,6 +110,11 @@ class _HomePageState extends State<HomePage> {
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
               await prefs.setBool('remember_me', false);
+              
+              await LogService.addLog(
+                action: 'logout',
+                description: 'Kullanıcı ana sayfadan çıkış yaptı.',
+              );
               
               await Supabase.instance.client.auth.signOut();
 

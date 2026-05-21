@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_colors.dart';
 import '../user_role.dart';
+import '../log_service.dart';
 
 class ProfilePage extends StatefulWidget {
   final UserRole role;
@@ -77,6 +78,11 @@ class _ProfilePageState extends State<ProfilePage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('remember_me', false);
 
+    await LogService.addLog(
+      action: 'logout',
+      description: 'Kullanıcı profil sayfasından çıkış yaptı.',
+    );
+    
     await supabase.auth.signOut();
 
     if (!mounted) return;

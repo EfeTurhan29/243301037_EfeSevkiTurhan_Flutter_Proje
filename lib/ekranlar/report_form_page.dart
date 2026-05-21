@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../log_service.dart';
+
 class ReportFormPage extends StatefulWidget {
   final String childId;
   final String childName;
@@ -51,6 +53,11 @@ class _ReportFormPageState extends State<ReportFormPage> {
       'activity_note': activityController.text.trim(),
       'relation_note': relationController.text.trim(),
     });
+
+    await LogService.addLog(
+      action: 'report_insert',
+      description: '${widget.childName} için günlük rapor eklendi.',
+    );
 
     if (!mounted) return;
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../log_service.dart';
+
 class ChildFormPage extends StatefulWidget {
   final Map<String, dynamic>? existingChild;
 
@@ -126,9 +128,14 @@ Future<void> createDefaultPaymentsForChild(String childId) async {
     try {
       if (isEditMode) {
         await supabase
-            .from('children')
-            .update(childData)
-            .eq('id', widget.existingChild!['id']);
+          .from('children')
+          .update(childData)
+          .eq('id', widget.existingChild!['id']);
+
+        await LogService.addLog(
+          action: 'child_update',
+          description: '${nameController.text.trim()} adlı öğrencinin bilgileri güncellendi.',
+        );
       } else {
         final insertedChild = await supabase
             .from('children')
@@ -136,10 +143,15 @@ Future<void> createDefaultPaymentsForChild(String childId) async {
             .select('id')
             .single();
 
-      final childId = insertedChild['id'];
+        final childId = insertedChild['id'];
 
-      await createDefaultPaymentsForChild(childId);
-    }
+        await createDefaultPaymentsForChild(childId);
+
+        await LogService.addLog(
+          action: 'child_insert',
+          description: '${nameController.text.trim()} adlı öğrenci eklendi.',
+        );
+      }
 
       if (!mounted) return;
 
