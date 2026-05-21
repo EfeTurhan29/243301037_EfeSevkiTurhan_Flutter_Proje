@@ -49,6 +49,50 @@ class _ChildFormPageState extends State<ChildFormPage> {
     }
   }
 
+  String getTurkishMonthName(int month) {
+  const months = [
+    'Ocak',
+    'Şubat',
+    'Mart',
+    'Nisan',
+    'Mayıs',
+    'Haziran',
+    'Temmuz',
+    'Ağustos',
+    'Eylül',
+    'Ekim',
+    'Kasım',
+    'Aralık',
+  ];
+
+  return months[month - 1];
+}
+
+Map<String, dynamic> createPaymentData(String childId, DateTime monthDate) {
+  final dueDate = DateTime(monthDate.year, monthDate.month + 1, 0);
+
+  return {
+    'child_id': childId,
+    'month': '${getTurkishMonthName(monthDate.month)} ${monthDate.year}',
+    'amount': 6000,
+    'status': 'Bekliyor',
+    'payment_date': null,
+    'due_date': dueDate.toIso8601String().substring(0, 10),
+  };
+}
+
+Future<void> createDefaultPaymentsForChild(String childId) async {
+  final now = DateTime.now();
+
+  final currentMonth = DateTime(now.year, now.month, 1);
+  final nextMonth = DateTime(now.year, now.month + 1, 1);
+
+  await supabase.from('payments').insert([
+    createPaymentData(childId, currentMonth),
+    createPaymentData(childId, nextMonth),
+  ]);
+}
+  
   Future<void> saveChild() async {
     if (nameController.text.trim().isEmpty ||
         ageController.text.trim().isEmpty ||
@@ -86,8 +130,16 @@ class _ChildFormPageState extends State<ChildFormPage> {
             .update(childData)
             .eq('id', widget.existingChild!['id']);
       } else {
-        await supabase.from('children').insert(childData);
-      }
+        final insertedChild = await supabase
+            .from('children')
+            .insert(childData)
+            .select('id')
+            .single();
+
+      final childId = insertedChild['id'];
+
+      await createDefaultPaymentsForChild(childId);
+    }
 
       if (!mounted) return;
 
