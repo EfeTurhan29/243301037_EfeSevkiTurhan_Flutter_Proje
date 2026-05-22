@@ -302,18 +302,23 @@ class _RegisterPageState extends State<RegisterPage> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               value: selectedChildId,
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Çocuğunuzu Seçin',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.child_care),
               ),
               items: children.map((child) {
+
                 final childName = child['full_name'] ?? 'İsimsiz Öğrenci';
                 final classroom = child['classroom'] ?? 'Sınıf bilgisi yok';
 
                 return DropdownMenuItem<String>(
                   value: child['id'],
-                  child: Text('$childName - $classroom'),
+                  child: Text(
+                    '$childName - $classroom',
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 );
               }).toList(),
               onChanged: isLoadingChildren

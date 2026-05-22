@@ -248,14 +248,21 @@ class _LoginPageState extends State<LoginPage> {
                             });
                           },
                         ),
-                        const Text('Hesabımı açık tut'),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: resetPassword,
-                          child: const Text('Şifremi unuttum'),
-                        ),
-                      ],
+                        const Expanded(
+                      child: Text(
+                        'Beni hatırla',
+                      overflow: TextOverflow.ellipsis,
                     ),
+                  ),
+                  TextButton(
+                    onPressed: resetPassword,
+                    child: const Text(
+                    'Şifremi unuttum',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
                     
                     const SizedBox(height: 20),
                     SizedBox(

@@ -39,56 +39,115 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> fetchSummaryData() async {
   try {
-    final today = DateTime.now();
-    final todayOnly = DateTime(today.year, today.month, today.day);
-    final todayText = today.toIso8601String().substring(0, 10);
+    final today = DateTime.now().toIso8601String().substring(0, 10);
 
-    final childrenResponse = await supabase.from('children').select('id');
+    List<String>? parentChildIds;
 
-    final reportsResponse = await supabase
-        .from('daily_reports')
-        .select('id')
-        .eq('report_date', todayText);
+    if (widget.role == UserRole.parent) {
+      final userId = supabase.auth.currentUser?.id;
 
-    final paymentsResponse = await supabase
-        .from('payments')
-        .select('id, status, due_date')
-        .eq('status', 'Bekliyor');
-
-    final paymentList = List<Map<String, dynamic>>.from(paymentsResponse);
-
-    int pendingCount = 0;
-    int overdueCount = 0;
-
-    for (final payment in paymentList) {
-      final dueDateValue = payment['due_date'];
-
-      if (dueDateValue == null) {
-        pendingCount++;
-        continue;
+      if (userId == null) {
+        setState(() {
+          totalChildren = 0;
+          todayReports = 0;
+          pendingPayments = 0;
+          overduePayments = 0;
+          isLoadingSummary = false;
+        });
+        return;
       }
 
-      final dueDate = DateTime.tryParse(dueDateValue.toString());
+      final relationResponse = await supabase
+          .from('child_parents')
+          .select('child_id')
+          .eq('parent_id', userId);
 
-      if (dueDate == null) {
-        pendingCount++;
-        continue;
-      }
-
-      final dueDateOnly = DateTime(dueDate.year, dueDate.month, dueDate.day);
-
-      if (dueDateOnly.isBefore(todayOnly)) {
-        overdueCount++;
-      } else {
-        pendingCount++;
-      }
+      parentChildIds = List<Map<String, dynamic>>.from(relationResponse)
+          .map((relation) => relation['child_id'].toString())
+          .toList();
     }
 
+    var childrenQuery = supabase.from('children').select('id');
+    var reportsQuery = supabase
+        .from('daily_reports')
+        .select('id, child_id')
+        .eq('report_date', today);
+    var paymentsQuery = supabase
+        .from('payments')
+        .select('id, child_id, status, due_date');
+
+    final childrenResponse = await childrenQuery;
+    final reportsResponse = await reportsQuery;
+    final paymentsResponse = await paymentsQuery;
+
+    List<Map<String, dynamic>> loadedChildren =
+        List<Map<String, dynamic>>.from(childrenResponse);
+
+    List<Map<String, dynamic>> loadedReports =
+        List<Map<String, dynamic>>.from(reportsResponse);
+
+    List<Map<String, dynamic>> loadedPayments =
+        List<Map<String, dynamic>>.from(paymentsResponse);
+
+    if (widget.role == UserRole.parent) {
+      final childIdSet = parentChildIds?.toSet() ?? {};
+
+      loadedChildren = loadedChildren
+          .where((child) => childIdSet.contains(child['id'].toString()))
+          .toList();
+
+      loadedReports = loadedReports
+          .where((report) => childIdSet.contains(report['child_id'].toString()))
+          .toList();
+
+      loadedPayments = loadedPayments
+          .where((payment) => childIdSet.contains(payment['child_id'].toString()))
+          .toList();
+    }
+
+    final pendingList = loadedPayments.where((payment) {
+      final status = payment['status']?.toString() ?? '';
+      final dueDateText = payment['due_date']?.toString();
+
+      if (status == 'Ödendi') {
+        return false;
+      }
+
+      if (dueDateText == null) {
+        return status == 'Bekliyor';
+      }
+
+      final dueDate = DateTime.tryParse(dueDateText);
+
+      if (dueDate == null) {
+        return status == 'Bekliyor';
+      }
+
+      return !dueDate.isBefore(DateTime.parse(today));
+    }).toList();
+
+    final overdueList = loadedPayments.where((payment) {
+      final status = payment['status']?.toString() ?? '';
+      final dueDateText = payment['due_date']?.toString();
+
+      if (status == 'Ödendi' || dueDateText == null) {
+        return false;
+      }
+
+      final dueDate = DateTime.tryParse(dueDateText);
+
+      if (dueDate == null) {
+        return false;
+      }
+
+      return dueDate.isBefore(DateTime.parse(today));
+    }).toList();
+
     setState(() {
-      totalChildren = List.from(childrenResponse).length;
-      todayReports = List.from(reportsResponse).length;
-      pendingPayments = pendingCount;
-      overduePayments = overdueCount;
+      totalChildren = loadedChildren.length;
+      todayReports = loadedReports.length;
+      pendingPayments = pendingList.length;
+      overduePayments = overdueList.length;
       isLoadingSummary = false;
     });
   } catch (error) {
